@@ -7,4 +7,4 @@ port = 6697
 use_tls = true
 
 [options]
-openweathermap_api_key = "dbe5c303b0deedec65d8c707ee9fc434"
+openweathermap_api_key = "xdd"
