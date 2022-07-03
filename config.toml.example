@@ -1,0 +1,10 @@
+nickname = "RustBot"
+username = "RustBot"
+realname = "Rust IRC Bot"
+server = "irc.freenode.net"
+channels = ["#test"]
+port = 6697
+use_tls = true
+
+[options]
+openweathermap_api_key = "dbe5c303b0deedec65d8c707ee9fc434"
