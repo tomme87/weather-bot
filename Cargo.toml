@@ -12,4 +12,4 @@ tokio = { version = "1", features = ["full"] }
 irc = "0.15.0"
 openweathermap = "0.2.4"
 regex = "1.5.6"
-sqlite = "0.26.0"
+rusqlite = { version = "0.27.0", features = ["bundled"] }

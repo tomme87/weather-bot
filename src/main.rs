@@ -3,7 +3,7 @@ use futures::prelude::*;
 use irc::client::prelude::*;
 use openweathermap::weather;
 use regex::Regex;
-use sqlite::Value;
+use rusqlite::Connection;
 
 #[tokio::main]
 async fn main() -> Result<(), failure::Error> {
@@ -20,8 +20,8 @@ async fn main() -> Result<(), failure::Error> {
 
     println!("{}", api_key);
 
-    let connection = sqlite::open(format!("{}/db.sqlite", env::current_dir().unwrap().to_str().unwrap())).unwrap();
-    connection.execute("CREATE TABLE IF NOT EXISTS user (name TEXT UNIQUE, last_location TEXT);").unwrap();
+    let connection = Connection::open(format!("{}/db.sqlite", env::current_dir().unwrap().to_str().unwrap())).unwrap();
+    connection.execute("CREATE TABLE IF NOT EXISTS user (name TEXT UNIQUE, last_location TEXT)", []).unwrap();
 
     let mut client = Client::from_config(config).await?;
     client.identify()?;
@@ -42,18 +42,18 @@ async fn main() -> Result<(), failure::Error> {
             if let Some(caps) = re.captures(msg.as_str()) {
                 let location = caps.get(1).unwrap().as_str();
                 if send_weather(location, &channel, &client, &api_key).await {
-                    let mut statement = connection.prepare("INSERT INTO user (name, last_location) VALUES(?,?) ON CONFLICT(name) DO UPDATE SET last_location=?").unwrap();
-                    statement.bind(1, nick.as_str()).unwrap();
-                    statement.bind(2, location).unwrap();
-                    statement.bind(3, location).unwrap();
-                    statement.next().unwrap();
+                    connection.execute("INSERT INTO user (name, last_location) VALUES(?1,?2) ON CONFLICT(name) DO UPDATE SET last_location=?3", [
+                        nick.as_str(),
+                        location,
+                        location
+                    ]).unwrap();
                 }
             } else if msg.eq("!v") {
-                let mut cursor = connection.prepare("SELECT last_location FROM user WHERE name = ?").unwrap().into_cursor();
-                cursor.bind(&[Value::String(nick)]).unwrap();
-                if let Some(row) = cursor.next().unwrap() {
-                    println!("last = {}", row[0].as_string().unwrap());
-                    send_weather(row[0].as_string().unwrap(), &channel, &client, &api_key).await;
+                let mut statement = connection.prepare("SELECT last_location FROM user WHERE name = ?").unwrap();
+                let mut rows = statement.query([nick.as_str()]).unwrap();
+                if let Some(row) = rows.next()? {
+                    let location = row.get::<usize, String>(0).unwrap();
+                    send_weather(location.as_str(), &channel, &client, &api_key).await;
                 }
             }
         }
